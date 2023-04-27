@@ -5,38 +5,24 @@ using namespace chrono;
 
 typedef vector<vector<int>> vii;
 
-void imprimir(vii &M){
-	cout << "Matriz" << endl;
-	for(int i=0; i<M.size(); i++){
-		for(int j=0; j<M.size(); j++){
-			cout << M[i][j] << " ";
-		}
-		cout << endl;
-	}
-}
-
-
 void mat_trad_sec(vii &A, vii &B, vii &C, int n){
 	for(int i=0; i<n; i++){
 		for(int j=0; j<n; j++){
 			for(int k=0; k<n; k++) C[i][j] += A[i][k] * B[k][j];
 		}
 	}
-
-	// imprimir(C);
 }
 
 
 void mat_trad_par(vii &A, vii &B, vii &C, int n){
 	for(int i=0; i<n; i++){
-		#pragma omp parallel for
-			for(int j=0; j<n; j++){
-				for(int k=0; k<n; k++) 
-					C[i][j] += A[i][k] * B[k][j];
+		for(int j=0; j<n; j++){
+			#pragma open parallel for reduction(+: C[i][j])
+			{
+				for(int k=0; k<n; k++) C[i][j] += A[i][k]*B[k][j];
 			}
+		}
 	}
-
-	// imprimir(C);
 }
 
 
@@ -58,13 +44,19 @@ int main(int argc, char *argv[]){
 	}
 
 
+
+	
 	vector<vector<int>> C(n, vector<int>(n));
 
 
 	// Multiplicacion tradicional secuencial
 	auto start = high_resolution_clock::now();
 
-	mat_trad_sec(A, B, C, n);
+	for(int i=0; i<n; i++){
+		for(int j=0; j<n; j++){
+			for(int k=0; k<n; k++) C[i][j] += A[i][k] * B[k][j];
+		}
+	}
 
 	auto finish = high_resolution_clock::now();
 	auto d = duration_cast<nanoseconds> (finish - start).count();
@@ -77,7 +69,14 @@ int main(int argc, char *argv[]){
 	// Multiplicacion tradicional paralela
 	start = high_resolution_clock::now();
 
-	mat_trad_par(A, B, C, n);
+	for(int i=0; i<n; i++){
+		for(int j=0; j<n; j++){
+			#pragma open parallel
+			{
+				for(int k=0; k<n; k++) C[i][j] += A[i][k]*B[k][j];
+			}
+		}
+	}
 
 	finish = high_resolution_clock::now();
 	d = duration_cast<nanoseconds> (finish - start).count();
