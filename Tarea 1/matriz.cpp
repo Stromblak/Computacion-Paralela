@@ -4,6 +4,8 @@ using namespace std;
 using namespace chrono;
 
 typedef vector<vector<int>> vii;
+// matriz.exe <n>
+
 
 void imprimir(vii &M){
 	cout << "Matriz" << endl;
@@ -16,16 +18,14 @@ void imprimir(vii &M){
 }
 
 
+// Matrices tradicionales
 void mat_trad_sec(vii &A, vii &B, vii &C, int n){
 	for(int i=0; i<n; i++){
 		for(int j=0; j<n; j++){
 			for(int k=0; k<n; k++) C[i][j] += A[i][k] * B[k][j];
 		}
 	}
-
-	// imprimir(C);
 }
-
 
 void mat_trad_par(vii &A, vii &B, vii &C, int n){
 	for(int i=0; i<n; i++){
@@ -35,11 +35,50 @@ void mat_trad_par(vii &A, vii &B, vii &C, int n){
 					C[i][j] += A[i][k] * B[k][j];
 			}
 	}
-
-	// imprimir(C);
 }
 
 
+// Matrices amigables con el cache
+void mat_amigable_sec(vii &A, vii &B, vii &C, int n){
+	vector<vector<int>> BT(n, vector<int>(n));
+	for(int i=0; i<n; i++){
+		for(int j=0; j<n; j++) BT[i][j] = B[j][i];
+	}
+
+	for(int i=0; i<n; i++){
+		for(int j=0; j<n; j++){
+			int suma = 0;
+			for(int k=0; k<n; k++){
+				suma += A[i][k] * BT[j][k];
+			}
+			C[i][j] = suma;
+		}
+	}
+}
+
+void mat_amigable_par(vii &A, vii &B, vii &C, int n){
+	vector<vector<int>> BT(n, vector<int>(n));
+	for(int i=0; i<n; i++){
+		for(int j=0; j<n; j++) BT[i][j] = B[j][i];
+	}
+
+	for(int i=0; i<n; i++){
+		#pragma omp parallel for
+			for(int j=0; j<n; j++){
+				int suma = 0;
+				for(int k=0; k<n; k++){
+					suma += A[i][k] * BT[j][k];
+				}
+				C[i][j] = suma;
+			}
+	}
+}
+
+
+// Strassen
+void strassen(){
+
+}
 
 
 int main(int argc, char *argv[]){
@@ -58,58 +97,30 @@ int main(int argc, char *argv[]){
 	}
 
 
-	vector<vector<int>> C(n, vector<int>(n));
+	int i = 0;
+	while(1){
+		vector<vector<int>> C(n, vector<int>(n));
 
+		auto start = high_resolution_clock::now();
 
-	// Multiplicacion tradicional secuencial
-	auto start = high_resolution_clock::now();
+		if(i == 0) mat_trad_sec(A, B, C, n);
+		else if(i == 1) mat_trad_par(A, B, C, n);
+		else if(i == 2) mat_amigable_sec(A, B, C, n);
+		else if(i == 3) mat_amigable_par(A, B, C, n);
+		else break;
 
-	mat_trad_sec(A, B, C, n);
+		auto finish = high_resolution_clock::now();
+		auto d = duration_cast<nanoseconds> (finish - start).count();
+		cout <<"total time "<< d << " [ns]" << " \n";
 
-	auto finish = high_resolution_clock::now();
-	auto d = duration_cast<nanoseconds> (finish - start).count();
-	cout <<"total time "<< d << " [ns]" << " \n";
+		/*
+		imprimir(A);
+		imprimir(B);
+		imprimir(C);
+		*/
 
-
-
-	for(int i=0; i<n; i++) for(int j=0; j<n; j++) C[i][j] = 0;
-
-	// Multiplicacion tradicional paralela
-	start = high_resolution_clock::now();
-
-	mat_trad_par(A, B, C, n);
-
-	finish = high_resolution_clock::now();
-	d = duration_cast<nanoseconds> (finish - start).count();
-	cout <<"total time "<< d << " [ns]" << " \n";
-
-
-
-	/*/ --------------- prints --------------------------
-	cout << "A" << endl;
-	for(int i=0; i<n; i++){
-		for(int j=0; j<n; j++){
-			cout << A[i][j] << " ";
-		}
-		cout << endl;
+		i++;
 	}
-
-	cout << "B" << endl;
-	for(int i=0; i<n; i++){
-		for(int j=0; j<n; j++){
-			cout << B[i][j] << " ";
-		}
-		cout << endl;
-	}		
-
-	cout << "C" << endl;
-	for(int i=0; i<n; i++){
-		for(int j=0; j<n; j++){
-			cout << C[i][j] << " ";
-		}
-		cout << endl;
-	}	*/
-
 
 	return 0;
 }
