@@ -96,7 +96,7 @@ vii mat_amigable_par(vii &A, vii &B){
 }
 
 
-// 4. Strassen - https://www.youtube.com/watch?v=OSelhO6Qnlc
+// 3. Strassen - https://www.youtube.com/watch?v=OSelhO6Qnlc
 vii suma(vii &M1, vii &M2){
 	int n = M1.size();
 	vii M(n, vector<int>(n));
@@ -228,7 +228,7 @@ vii sumap(vii &M1, vii &M2){
     int n = M1.size();
     vii M(n, vector<int>(n));
 
-    #pragma omp parallel for
+    #pragma omp parallel for collapse(2)
     for(int i=0; i<n; i++){
         for(int j=0; j<n; j++){
             M[i][j] = M1[i][j] + M2[i][j];
@@ -248,7 +248,7 @@ vii para3a(vii A, vii B){
 	vii B11(n, vector<int>(n)), B12(n, vector<int>(n));
 	vii B21(n, vector<int>(n)), B22(n, vector<int>(n));
 	
-	#pragma omp parallel for
+	#pragma omp parallel for collapse(2)
 	for(int i=0; i<n; i++){
 		for(int j=0; j<n; j++){
 			A11[i][j] = A[i][j];
@@ -293,7 +293,7 @@ vii para3a(vii A, vii B){
 	}
 
 	vii C(n*2, vector<int>(n*2));
-	#pragma omp parallel for
+	#pragma omp parallel for collapse(2)
 	for(int i=0; i<n; i++){
 		for(int j=0; j<n; j++){
 			C[i][j] = C1[i][j];
@@ -306,7 +306,77 @@ vii para3a(vii A, vii B){
 	return C;
 }
 // strassen paralelizado
+vii restap(vii &M1, vii &M2){
+    int n = M1.size();
+    vii M(n, vector<int>(n));
 
+    #pragma omp parallel for collapse(2)
+    for(int i=0; i<n; i++){
+        for(int j=0; j<n; j++){
+            M[i][j] = M1[i][j] - M2[i][j];
+        }
+    }
+
+    return M;
+}
+
+vii strassenp(vii A, vii B){
+	// limite recursion
+	if(A.size() <= 2 << 5) return mat_amigable_sec(A, B);
+
+	int n = A.size()/2;
+
+	// Submatrices de A y B
+	vii A11(n, vector<int>(n)), A12(n, vector<int>(n));
+	vii A21(n, vector<int>(n)), A22(n, vector<int>(n));
+	vii B11(n, vector<int>(n)), B12(n, vector<int>(n));
+	vii B21(n, vector<int>(n)), B22(n, vector<int>(n));
+
+	// Particionar las matrices A y B en 4 submatrices cada una
+	#pragma omp parallel for collapse(2)
+	for(int i=0; i<n; i++){
+		for(int j=0; j<n; j++){
+			A11[i][j] = A[i][j];
+			A12[i][j] = A[i][j+n];
+			A21[i][j] = A[i+n][j];
+			A22[i][j] = A[i+n][j+n];
+			B11[i][j] = B[i][j];
+			B12[i][j] = B[i][j+n];
+			B21[i][j] = B[i+n][j];
+			B22[i][j] = B[i+n][j+n];
+		}
+	}
+	vii M1, M2, M3, M4, M5, M6, M7;
+	#pragma omp parallel sections
+    {
+		#pragma omp section
+		M1 = strassenp( sumap(A11, A22), sumap(B11, B22) );
+		#pragma omp section
+		M2 = strassenp( sumap(A21, A22), B11 );
+		#pragma omp section
+		M3 = strassenp( A11, restap(B12, B22) );
+		#pragma omp section
+		M4 = strassenp( A22, restap(B21, B11) );
+		#pragma omp section
+		M5 = strassenp( sumap(A11, A12), B22 );
+		#pragma omp section
+		M6 = strassenp( restap(A21, A11), sumap(B11, B12) );
+		#pragma omp section
+		M7 = strassenp( restap(A12, A22), sumap(B21, B22) );
+	}
+	vii C(n*2, vector<int>(n*2));
+	#pragma omp parallel for collapse(2)
+	for(int i=0; i<n; i++){
+		for(int j=0; j<n; j++){
+			C[i][j] = M1[i][j] + M4[i][j] - M5[i][j] + M7[i][j];
+			C[i][j+n] = M3[i][j] + M5[i][j];
+			C[i+n][j] = M2[i][j] + M4[i][j];
+			C[i+n][j+n] = M1[i][j] - M2[i][j] + M3[i][j] + M6[i][j];
+		}
+	}
+
+	return C;
+}
 int main(int argc, char *argv[]){
 	minstd_rand rng;
 	rng.seed(10);
@@ -337,6 +407,7 @@ int main(int argc, char *argv[]){
 		else if(i == 4) C = multiplicacion_3a_sec(A, B);
 		else if(i == 5) C = strassen_sec(A, B);
 		else if(i == 6) C = para3a(A, B);
+		else if(i == 7) C = strassenp(A, B);
 		else break;
 
 		auto finish = high_resolution_clock::now();
@@ -350,10 +421,43 @@ int main(int argc, char *argv[]){
 		else if(i == 4) cout << "3a par       "<< d << " [ns]" << endl;
 		else if(i == 5) cout << "Strassen sec "<< d << " [ns]" << endl;
 		else if(i == 6) cout << "3a par para  "<< d << " [ns]" << endl;
+		else if(i == 7) cout << "Strassen para  "<< d << " [ns]" << endl;
 
 		if(n <= 4) imprimir(C);
 		i++;
 	}
 
+	// ver si coinciden 
+	// desperdicio de memoria tremendo
+	vector<vii> c(8);
+	c[0] = mat_trad_sec(A, B);
+	c[1] = mat_trad_par(A, B);
+	c[2] = mat_amigable_sec(A, B);
+	c[3] = mat_amigable_par(A, B);
+	c[4] = multiplicacion_3a_sec(A, B);
+	c[5] = strassen_sec(A, B);
+	c[6] = para3a(A, B);
+	c[7] = strassenp(A, B);
+
+	bool iguales = true;
+	for (int i = 0; i < 7; i++) {
+    bool coinciden = true;
+    for (int j = 0; j < A.size(); j++) {
+        for (int k = 0; k < A.size(); k++) {
+            if (c[i][j][k] != c[i+1][j][k]) {
+                coinciden = false;
+                break;
+            }
+        }
+        if (!coinciden) break;
+    }
+    if (!coinciden) {
+        cout << "algoritmo " << i << " y " << i+1 << " no coinciden" << endl;
+        iguales = false;
+    }
+	}
+	if (iguales) 
+    cout << "coinciden" << endl;
+	
 	return 0;
 }
