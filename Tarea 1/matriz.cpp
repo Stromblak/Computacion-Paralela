@@ -19,15 +19,23 @@ void imprimir(vii &M){
 
 
 // Matrices tradicionales
-void mat_trad_sec(vii &A, vii &B, vii &C, int n){
+vii mat_trad_sec(vii &A, vii &B){
+	int n = A.size();
+	vector<vector<int>> C(n, vector<int>(n));
+
 	for(int i=0; i<n; i++){
 		for(int j=0; j<n; j++){
 			for(int k=0; k<n; k++) C[i][j] += A[i][k] * B[k][j];
 		}
 	}
+
+	return C;
 }
 
-void mat_trad_par(vii &A, vii &B, vii &C, int n){
+vii mat_trad_par(vii &A, vii &B){
+	int n = A.size();
+	vector<vector<int>> C(n, vector<int>(n));
+
 	for(int i=0; i<n; i++){
 		#pragma omp parallel for
 			for(int j=0; j<n; j++){
@@ -35,11 +43,16 @@ void mat_trad_par(vii &A, vii &B, vii &C, int n){
 					C[i][j] += A[i][k] * B[k][j];
 			}
 	}
+
+	return C;
 }
 
 
 // Matrices amigables con el cache
-void mat_amigable_sec(vii &A, vii &B, vii &C, int n){
+vii mat_amigable_sec(vii &A, vii &B){
+	int n = A.size();
+	vector<vector<int>> C(n, vector<int>(n));
+
 	vector<vector<int>> BT(n, vector<int>(n));
 	for(int i=0; i<n; i++){
 		for(int j=0; j<n; j++) BT[i][j] = B[j][i];
@@ -54,9 +67,14 @@ void mat_amigable_sec(vii &A, vii &B, vii &C, int n){
 			C[i][j] = suma;
 		}
 	}
+
+	return C;
 }
 
-void mat_amigable_par(vii &A, vii &B, vii &C, int n){
+vii mat_amigable_par(vii &A, vii &B){
+	int n = A.size();
+	vector<vector<int>> C(n, vector<int>(n));
+
 	vector<vector<int>> BT(n, vector<int>(n));
 	for(int i=0; i<n; i++){
 		for(int j=0; j<n; j++) BT[i][j] = B[j][i];
@@ -72,7 +90,12 @@ void mat_amigable_par(vii &A, vii &B, vii &C, int n){
 				C[i][j] = suma;
 			}
 	}
+
+	return C;
 }
+
+// 3a
+
 
 
 // Strassen
@@ -103,66 +126,8 @@ vii resta(vii &M1, vii &M2){
 	return M;
 }
 
-/*
-void strassen(vii A, vii B, vii C){
-	if(A.size() == 1){
-		C[0][0] = A[0][0] * B[0][0];
-		return;
-	}
-
-	int tam = A.size()/2;
-
-	vii A11(tam, vector<int>(tam)), A12(tam, vector<int>(tam));
-	vii A21(tam, vector<int>(tam)), A22(tam, vector<int>(tam));
-	vii B11(tam, vector<int>(tam)), B12(tam, vector<int>(tam));
-	vii B21(tam, vector<int>(tam)), B22(tam, vector<int>(tam));
-
-	for(int i=0; i<tam; i++){
-		for(int j=0; j<tam; j++){
-			A11[i][j] = A[i][j];
-			A12[i][j] = A[i][j+tam];
-			A21[i][j] = A[i+tam][j];
-			A22[i][j] = A[i+tam][j+tam];
-			B11[i][j] = B[i][j];
-			B12[i][j] = B[i][j+tam];
-			B21[i][j] = B[i+tam][j];
-			B22[i][j] = B[i+tam][j+tam];
-		}
-	}
-	vii M1(tam, vector<int>(tam));
-	vii M2(tam, vector<int>(tam));
-	vii M3(tam, vector<int>(tam));
-	vii M4(tam, vector<int>(tam));
-	vii M5(tam, vector<int>(tam));
-	vii M6(tam, vector<int>(tam));
-	vii M7(tam, vector<int>(tam));
-
-	strassen( suma(A11, A22), suma(B11, B22), M1 );
-	strassen( suma(A21, A22), B11, M2 );
-	strassen( A11, resta(B12, B22), M3 );
-	strassen( A22, resta(B21, B11), M4 );
-	strassen( suma(A11, A12), B22, M5 );
-	strassen( resta(A21, A11), suma(B11, B12), M6 );
-	strassen( resta(A12, A22), suma(B21, B22), M7 );
-
-
-	vii C11 = suma( suma(M1, M4), resta(M7, M5));
-	vii C12 = suma(M3, M5);
-	vii C21 = suma(M2, M4);
-	vii C22 = suma( resta(M1, M2), suma(M3, M6));
-
-	for(int i=0; i<tam; i++){
-		for(int j=0; j<tam; j++){
-			C[i][j] = C11[i][j];
-			C[i][j+tam] = C12[i][j];
-			C[i+tam][j] = C21[i][j];
-			C[i+tam][j+tam] = C22[i][j];
-		}
-	}
-}
-*/
-
 vii strassen(vii A, vii B){
+	// implementar limite de recursion con multiplicacion normal
 	if(A.size() == 1){
 		vii C(1, vector<int>(1));
 		C[0][0] = A[0][0] * B[0][0];
@@ -235,14 +200,13 @@ int main(int argc, char *argv[]){
 
 	int i = 0;
 	while(1){
-		vector<vector<int>> C(n, vector<int>(n));
-
+		vii C;
 		auto start = high_resolution_clock::now();
 
-		if(i == 0) mat_trad_sec(A, B, C, n);
-		else if(i == 1) mat_trad_par(A, B, C, n);
-		else if(i == 2) mat_amigable_sec(A, B, C, n);
-		else if(i == 3) mat_amigable_par(A, B, C, n);
+		if(i == 0) C = mat_trad_sec(A, B);
+		else if(i == 1) C = mat_trad_par(A, B);
+		else if(i == 2) C = mat_amigable_sec(A, B);
+		else if(i == 3) C = mat_amigable_par(A, B);
 		else if(i == 4) C = strassen(A, B);
 		else break;
 
