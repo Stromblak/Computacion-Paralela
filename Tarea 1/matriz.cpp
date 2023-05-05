@@ -224,7 +224,87 @@ vii strassen_sec(vii A, vii B){
 }
 
 // 3a paralelizado
+vii sumap(vii &M1, vii &M2){
+    int n = M1.size();
+    vii M(n, vector<int>(n));
 
+    #pragma omp parallel for
+    for(int i=0; i<n; i++){
+        for(int j=0; j<n; j++){
+            M[i][j] = M1[i][j] + M2[i][j];
+        }
+    }
+
+    return M;
+}
+
+vii para3a(vii A, vii B){
+	if(A.size() <= 2 << 5) return mat_amigable_sec(A, B);
+
+	int n = A.size()/2;
+
+	vii A11(n, vector<int>(n)), A12(n, vector<int>(n));
+	vii A21(n, vector<int>(n)), A22(n, vector<int>(n));
+	vii B11(n, vector<int>(n)), B12(n, vector<int>(n));
+	vii B21(n, vector<int>(n)), B22(n, vector<int>(n));
+	
+	#pragma omp parallel for
+	for(int i=0; i<n; i++){
+		for(int j=0; j<n; j++){
+			A11[i][j] = A[i][j];
+			A12[i][j] = A[i][j+n];
+			A21[i][j] = A[i+n][j];
+			A22[i][j] = A[i+n][j+n];
+			B11[i][j] = B[i][j];
+			B12[i][j] = B[i][j+n];
+			B21[i][j] = B[i+n][j];
+			B22[i][j] = B[i+n][j+n];
+		}
+	}
+
+	vii aux1, aux2, C1, C2, C3, C4;
+
+	#pragma omp parallel sections 
+	{
+    #pragma omp section
+    {
+        aux1 = para3a(A11, B11);
+        aux2 = para3a(A12, B21);
+        C1 = sumap(aux1, aux2);
+    }
+    #pragma omp section
+    {
+        aux1 = para3a(A11, B12);
+        aux2 = para3a(A12, B22);    
+        C2 = sumap(aux1, aux2);
+    }
+    #pragma omp section
+    {
+        aux1 = para3a(A21, B11);
+        aux2 = para3a(A22, B21);    
+        C3 = sumap(aux1, aux2);
+    }
+    #pragma omp section
+    {
+        aux1 = para3a(A22, B12);
+        aux2 = para3a(A22, B22);    
+        C4 = sumap(aux1, aux2);
+    }
+	}
+
+	vii C(n*2, vector<int>(n*2));
+	#pragma omp parallel for
+	for(int i=0; i<n; i++){
+		for(int j=0; j<n; j++){
+			C[i][j] = C1[i][j];
+			C[i][j+n] = C2[i][j];
+			C[i+n][j] = C3[i][j];
+			C[i+n][j+n] = C4[i][j];
+		}
+	}
+
+	return C;
+}
 // strassen paralelizado
 
 int main(int argc, char *argv[]){
@@ -256,6 +336,7 @@ int main(int argc, char *argv[]){
 		else if(i == 3) C = mat_amigable_par(A, B);
 		else if(i == 4) C = multiplicacion_3a_sec(A, B);
 		else if(i == 5) C = strassen_sec(A, B);
+		else if(i == 6) C = para3a(A, B);
 		else break;
 
 		auto finish = high_resolution_clock::now();
@@ -268,6 +349,7 @@ int main(int argc, char *argv[]){
 		else if(i == 3) cout << "Amig par     "<< d << " [ns]" << endl;
 		else if(i == 4) cout << "3a par       "<< d << " [ns]" << endl;
 		else if(i == 5) cout << "Strassen sec "<< d << " [ns]" << endl;
+		else if(i == 6) cout << "3a par para  "<< d << " [ns]" << endl;
 
 		if(n <= 4) imprimir(C);
 		i++;
