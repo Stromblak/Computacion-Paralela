@@ -324,7 +324,7 @@ vii bloques_par(vii A, vii B){
 
 vii strassen_par(vii A, vii B){
 	// limite recursion
-	if(A.size() <= 2 << 5) return mat_amigable_par(A, B);
+	if(A.size() <= 2 << 5) return mat_amigable_sec(A, B);
 
 	int n = A.size()/2;
 
