@@ -381,7 +381,7 @@ vii strassen_par(vii A, vii B){
 
 int main(int argc, char *argv[]){
 	minstd_rand rng;
-	rng.seed(10);
+	rng.seed(time(NULL));
 
 	int n = 1024, printMat = 0, alg = 0, flag = 0;
 	for(int i=0; i<argc; i++){
