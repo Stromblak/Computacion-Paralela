@@ -13,3 +13,5 @@ Para ejecutar: matriz.exe
 		5: Multiplicacion Strassen paralela
 		6: multiplicacion 3a secuencial
 		7: multiplicacion 3a paralela
+	
+	-r         : para mostrar el resultado solo en numeros

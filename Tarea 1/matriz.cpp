@@ -387,10 +387,11 @@ int main(int argc, char *argv[]){
 	minstd_rand rng;
 	rng.seed(time(NULL));
 
-	int n = 2 << 8, printMat = 0, alg = 0, flag = 0;
+	int n = 2 << 8, printMat = 0, alg = 0, flag = 0, soloResultados = 0;
 	for(int i=0; i<argc; i++){
 		if( !strcmp(argv[i], "-n" ) ) n = 2 << (atoi(argv[i+1]) - 1);
 		if( !strcmp(argv[i], "-p" ) ) printMat = 1;
+		if( !strcmp(argv[i], "-r" ) ) soloResultados = 1;
 		if( !strcmp(argv[i], "-a" ) ){
 			alg = atoi(argv[i+1]);
 			flag = 1;
@@ -427,15 +428,18 @@ int main(int argc, char *argv[]){
 
 		auto finish = high_resolution_clock::now();
 		auto d = duration_cast<microseconds> (finish - start).count();
-
-		if(alg == 0)      cout << "Trad sec     "<< d/1000.0 << " [ms]" << endl;
-		else if(alg == 1) cout << "Trad par     "<< d/1000.0 << " [ms]" << endl;
-		else if(alg == 2) cout << "Amig sec     "<< d/1000.0 << " [ms]" << endl;
-		else if(alg == 3) cout << "Amig par     "<< d/1000.0 << " [ms]" << endl;
-		else if(alg == 4) cout << "Strassen sec "<< d/1000.0 << " [ms]" << endl;
-		else if(alg == 5) cout << "Strassen par "<< d/1000.0 << " [ms]" << endl;
-		else if(alg == 6) cout << "bloques sec  "<< d/1000.0 << " [ms]" << endl;
-		else if(alg == 7) cout << "bloques par  "<< d/1000.0 << " [ms]" << endl;
+		
+		if(soloResultados) cout << d/1000.0 << endl;
+		else{
+			if(alg == 0)      cout << "Trad sec     "<< d/1000.0 << " [ms]" << endl;
+			else if(alg == 1) cout << "Trad par     "<< d/1000.0 << " [ms]" << endl;
+			else if(alg == 2) cout << "Amig sec     "<< d/1000.0 << " [ms]" << endl;
+			else if(alg == 3) cout << "Amig par     "<< d/1000.0 << " [ms]" << endl;
+			else if(alg == 4) cout << "Strassen sec "<< d/1000.0 << " [ms]" << endl;
+			else if(alg == 5) cout << "Strassen par "<< d/1000.0 << " [ms]" << endl;
+			else if(alg == 6) cout << "bloques sec  "<< d/1000.0 << " [ms]" << endl;
+			else if(alg == 7) cout << "bloques par  "<< d/1000.0 << " [ms]" << endl;
+		}
 
 		if(printMat) imprimir(C, "C");
 		if(flag) break;
