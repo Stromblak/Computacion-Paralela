@@ -230,7 +230,7 @@ vii sumap(vii &M1, vii &M2){
     int n = M1.size();
     vii M(n, vector<int>(n));
 
-    #pragma omp parallel for collapse(2)
+    #pragma omp parallel for
 		for(int i=0; i<n; i++){
 			for(int j=0; j<n; j++){
 				M[i][j] = M1[i][j] + M2[i][j];
@@ -244,7 +244,7 @@ vii restap(vii &M1, vii &M2){
     int n = M1.size();
     vii M(n, vector<int>(n));
 
-    #pragma omp parallel for collapse(2)
+    #pragma omp parallel for
 		for(int i=0; i<n; i++){
 			for(int j=0; j<n; j++){
 				M[i][j] = M1[i][j] - M2[i][j];
@@ -264,7 +264,7 @@ vii bloques_par(vii A, vii B){
 	vii B11(n, vector<int>(n)), B12(n, vector<int>(n));
 	vii B21(n, vector<int>(n)), B22(n, vector<int>(n));
 	
-	#pragma omp parallel for collapse(2)
+	#pragma omp parallel for
 		for(int i=0; i<n; i++){
 			for(int j=0; j<n; j++){
 				A11[i][j] = A[i][j];
@@ -309,7 +309,7 @@ vii bloques_par(vii A, vii B){
 	}
 
 	vii C(n*2, vector<int>(n*2));
-	#pragma omp parallel for collapse(2)
+	#pragma omp parallel for
 		for(int i=0; i<n; i++){
 			for(int j=0; j<n; j++){
 				C[i][j] = C1[i][j];
@@ -335,7 +335,7 @@ vii strassen_par(vii A, vii B){
 	vii B21(n, vector<int>(n)), B22(n, vector<int>(n));
 
 	// Particionar las matrices A y B en 4 submatrices cada una
-	#pragma omp parallel for collapse(2)
+	#pragma omp parallel for
 		for(int i=0; i<n; i++){
 			for(int j=0; j<n; j++){
 				A11[i][j] = A[i][j];
@@ -369,7 +369,7 @@ vii strassen_par(vii A, vii B){
 	}
 
 	vii C(n*2, vector<int>(n*2));
-	#pragma omp parallel for collapse(2)
+	#pragma omp parallel for
 		for(int i=0; i<n; i++){
 			for(int j=0; j<n; j++){
 				C[i][j] = M1[i][j] + M4[i][j] - M5[i][j] + M7[i][j];
