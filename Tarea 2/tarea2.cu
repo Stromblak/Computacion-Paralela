@@ -10,7 +10,7 @@ using namespace cooperative_groups;
 
 
 // Kernel para encontrar el maximo
-__device__ int reduce_max(cg::thread_group g, int *temp, int val) {
+__device__ int reduce_max(thread_group g, int *temp, int val) {
     int tid = g.thread_rank();
 
     for (int i = blockDim.x / 2; i > 0; i /= 2){
