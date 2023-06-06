@@ -87,13 +87,15 @@ int main(int argc, char *argv[]) {
 	vector<cudaStream_t> stream(n);
 	for (int i=0; i<n; i++) cudaStreamCreate(&stream[i]);
 
-	int bloques = 16, hebras = 8;
+	int bloques = 100;
+	int hebras = ceil(k/bloques);
+	int sharedBytes = hebras * sizeof(int);
 	for (int i=0; i<n; i++) {
 		// copia arreglo host a gpu
 		cudaMemcpyAsync(arreglosDst[i], arreglosSrc[i], k * sizeof(int), cudaMemcpyHostToDevice, stream[i]);
 		
 		// kernel
-		reduce<<<bloques, hebras, hebras * sizeof(int), stream[i]>>>(arreglosDst[i], arreglosDst[i]);
+		reduce<<<bloques, hebras, sharedBytes, stream[i]>>>(arreglosDst[i], arreglosDst[i]);
 
 		// copia arreglo gpu a host
 		cudaMemcpyAsync(arreglosSrc[i], arreglosDst[i], sizeof(int), cudaMemcpyDeviceToHost, stream[i]);
