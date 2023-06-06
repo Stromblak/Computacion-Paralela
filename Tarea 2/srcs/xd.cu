@@ -34,13 +34,6 @@ __global__ void reduce(int *maximos, int *input, int n)
         atomicMax(maximos, block_max);
 }
 
-void print(int *in, int N)
-{
-    for (int i = 0; i < N; i++)
-        printf("%d ", in[i]);
-    printf("\n");
-}
-
 int main(int argc, char *argv[])
 {
 
