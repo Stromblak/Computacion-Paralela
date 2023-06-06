@@ -1,8 +1,9 @@
-#include <stdio.h>
 #include <iostream>
 #include <vector>
-#include <math.h> 
+#include <math.h>
 #include <cooperative_groups.h>
+#include <algorithm>
+#include <random>
 #include <cuda_runtime.h>
 
 using namespace std;
@@ -10,133 +11,106 @@ using namespace cooperative_groups;
 
 
 // Kernel para encontrar el maximo
-__device__ int reduce_max(cg::thread_group g, int *temp, int val) {
-    int tid = g.thread_rank();
+__device__ int reduce_max(thread_group g, int *temp, int val) {
+	int tid = g.thread_rank();
 
-    for (int i = blockDim.x / 2; i > 0; i /= 2){
-        temp[tid] = val;
+	// toma una mitad para compararla con la otra, luego la mitad de la primera mitad, y asi
+	for (int i = blockDim.x/2; i>0; i /= 2){
+		// cada hilo toma un valor, se espera a que todos terminen
+		temp[tid] = val;	
 		g.sync();
 
-        if(tid<i) val += temp[tid + i];
+		// cada hilo compara su valor con el de la otra mitad respectivo y guarda el maximo, se espera a que todos terminen
+		if(tid<i) val = max(val, temp[tid + i]);
 		g.sync();
-    }
+	}
 
-    return val; // note: only thread 0 will return full sum
+	return val;
 }
 
 
 // Kernel inicio, cooperative groups
-__global__ void reduce(int *sum, int *input, int n){
+__global__ void reduce(int *maximos, int *input){
+	// memoria compartida del stream
     extern __shared__ int temp[];
-    int id = blockIdx.x*blockDim.x + threadIdx.x;
 
+	// id del thread
+    int id = blockIdx.x*blockDim.x + threadIdx.x;		
+
+	// grupo cooperativo
     thread_group g = this_thread_block();
 
-    int block_sum = reduce_sum(g,temp, input[id]);
+	// llamada al reduce 
+    int block_max = reduce_max(g, temp, input[id]);
 
-    if (threadIdx.x == 0) atomicAdd(sum, block_sum);
+	// se guarda el valor maximo, la primera hebra es la encargada en este caso
+    if (threadIdx.x == 0) atomicMax(maximos, block_max);
 }
 
 
 int main(int argc, char *argv[]) {
 	// arreglos, tamaño
-	int n = 10, k = 20;
+	int n = 3, k = 5, p = 0;
 	for(int i=0; i<argc; i++){
 		if( !strcmp(argv[i], "-n" ) ) n = atoi(argv[i+1]);
 		if( !strcmp(argv[i], "-k" ) ) k = atoi(argv[i+1]);
+		if( !strcmp(argv[i], "-p" ) ) p = 1;
 	}
 
 	// memoria
-	float *arreglosDst[n], *arreglosSrc[n];
-	for(int i=0; i<n; i++){
-		cudaMallocHost(&arreglosDst[i], n * sizeof(float));
-		cudaMalloc(&arreglosSrc[i], n * sizeof(float));
-	}
+	vector<int*> arreglosDst(n), arreglosSrc(n);
+    for (int i = 0; i < n; i++) {
+        cudaMallocHost(&arreglosSrc[i], k * sizeof(int));
+        cudaMalloc(&arreglosDst[i], k* sizeof(int));
+    }
+	
 
 	// creacion arreglos
-	for(int i=0; i<n; i++) for(int j=0; j<k; j++) arreglosDst[i][j] = j;
-
-	
-	/* ejemplo cudaMallocManaged
-    int N = 1 << 4;
-    unsigned int threads = 2;
-    float *hdx;
-
-    cudaMallocManaged(&hdx, N * sizeof(float));
-
-    for (int i = 0; i < N; i++)
-    {
-        hdx[i] = (float)(N -i);
-    }
-    unsigned int blocks = ceil(N/threads);
-
-    float a = 2.0f;
-
-    void *args[] = { &N, &a, &hdx };
-    cudaError_t res = cudaLaunchKernel((void*)hola, dim3(blocks,1,1), dim3(threads,1,1), args, 0, NULL);
-    if (res != cudaSuccess) {
-        printf ("error en kernel launch: %s \n", cudaGetErrorString(res));
-        return -1;
-    }
-    cudaDeviceSynchronize();
-
-
-    for (int i = 0; i < N; i++) {
-	printf(" hdx %f\n",hdx[i]);
-    }
-
-    cudaFree(hdx);
-
-    return 0;
-	*/
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	
-	// cudaMallocManaged
-
-	for (int i = 0; i < N; i++){
-		hx[i] = (float)(N-i);
+	for(int i=0; i<n; i++){
+		for(int j=0; j<k; j++){
+			arreglosSrc[i][j] = j;
+		}
+		shuffle(arreglosSrc[i], arreglosSrc[i] + k, std::mt19937{std::random_device{}()});
 	}
 
-	int nStreams = 2;
-	int streamSize = N/nStreams;
-	int streamSizeBytes = streamSize*sizeof(int);
-	int gdstream = streamSize/threads;
-	cudaStream_t stream[nStreams];
-
-	for (int i = 0; i < nStreams; i ++) cudaStreamCreate(&stream[i]);
-
-	printf(" N %d blocks %d streamSize %d gdstream %d\n", N, threads, streamSize, gdstream);
-	for (int i = 0; i < nStreams; i ++) {
-		int offset = i * streamSize;
-		cudaMemcpyAsync(&dx[offset], &hx[offset], streamSizeBytes, cudaMemcpyHostToDevice, stream[i]);
-		doble<<<gdstream, threads, 0, stream[i]>>>(dx, offset);
-		cudaMemcpyAsync(&hx[offset], &dx[offset], streamSizeBytes, cudaMemcpyDeviceToHost, stream[i]);
-	}
-	cudaDeviceSynchronize();
-
-	for (int i = 0; i < N; i++) {
-		printf(" hx %f\n",hx[i]);
+	// print arreglos
+	if(p){
+		for(int i=0; i<n; i++){
+			for(int j=0; j<k; j++){
+				cout << arreglosSrc[i][j] << " ";
+			}
+			cout << endl;
+		}
 	}
 
-	cudaFree(dx);
-	cudaFreeHost(hx);
-	for (int i = 0; i < nStreams; i ++) {
+	// streams
+	vector<cudaStream_t> stream(n);
+	for (int i=0; i<n; i++) cudaStreamCreate(&stream[i]);
+
+	int bloques = 16, hebras = 8;
+	for (int i=0; i<n; i++) {
+		// copia arreglo host a gpu
+		cudaMemcpyAsync(arreglosDst[i], arreglosSrc[i], k * sizeof(int), cudaMemcpyHostToDevice, stream[i]);
+		
+		// kernel
+		reduce<<<bloques, hebras, hebras * sizeof(int), stream[i]>>>(arreglosDst[i], arreglosDst[i]);
+
+		// copia arreglo gpu a host
+		cudaMemcpyAsync(arreglosSrc[i], arreglosDst[i], sizeof(int), cudaMemcpyDeviceToHost, stream[i]);
+	}
+	cudaDeviceSynchronize();	// Sincronizacion de los streams
+
+
+	// print de los maximos
+    for (int i = 0; i < n; i++) cout << arreglosSrc[i][0] << " ";
+
+	// liberacion memoria y strems
+	for(int i=0; i<n; i++){
+		cudaFree(arreglosDst[i]);
+		cudaFreeHost(arreglosSrc[i]);
 		cudaStreamDestroy(stream[i]);
 	}
-
+	
 	return 0;
 }
 
