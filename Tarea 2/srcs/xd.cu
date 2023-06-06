@@ -62,6 +62,7 @@ int main(int argc, char *argv[])
     for (int i = 0; i < n; ++i)
         cout << data[i] << " ";
 
+    //cudaStream_t stream[nBlocks]; no funciona
     cudaStream_t *streams = new cudaStream_t[nBlocks];
     for (int i = 0; i < nBlocks; ++i)
         cudaStreamCreate(&streams[i]);
@@ -72,7 +73,7 @@ int main(int argc, char *argv[])
     cudaDeviceSynchronize();
 
     for (int i = 0; i < nBlocks; ++i)
-        cout << "Max value for A" << i + 1 << ": " << maximos[i] << endl;
+        cout << "Max A" << i + 1 << ": " << maximos[i] << endl;
 
     for (int i = 0; i < nBlocks; ++i)
         cudaStreamDestroy(streams[i]);
