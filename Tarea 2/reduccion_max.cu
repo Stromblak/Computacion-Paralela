@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
 	for (int i=0; i<n; i++) cudaStreamCreate(&stream[i]);
 
 	// calculo para no superar el limite de hebras del bloque
-	if(bloques == -1) bloques = max(2, 32 * k/1024);
+	if(bloques == -1) bloques = max(2, k/1024);
 	int hebras = (k + bloques - 1) / bloques;
 	int sharedBytes = hebras * sizeof(int);
 
