@@ -50,7 +50,7 @@ __global__ void reduce(int *maximos, int *input){
 
 int main(int argc, char *argv[]) {
 	// arreglos, tamaño
-	int n = 3, k = 5, p = 0, bloques;
+	int n = 3, k = 5, p = 0, bloques = -1;
 	for(int i=0; i<argc; i++){
 		if( !strcmp(argv[i], "-n" ) ) n = atoi(argv[i+1]);
 		if( !strcmp(argv[i], "-k" ) ) k = atoi(argv[i+1]);
@@ -89,7 +89,7 @@ int main(int argc, char *argv[]) {
 	vector<cudaStream_t> stream(n);
 	for (int i=0; i<n; i++) cudaStreamCreate(&stream[i]);
 
-	bloques = max(4, 32 * k/1024);
+	if(bloques == -1) bloques = max(2, 32 * k/1024);
 	int hebras = (k + bloques - 1) / bloques;
 	int sharedBytes = hebras * sizeof(int);
 
