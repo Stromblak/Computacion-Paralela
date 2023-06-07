@@ -50,18 +50,20 @@ __global__ void reduce(int *maximos, int *input){
 
 int main(int argc, char *argv[]) {
 	// arreglos, tamaño
-	int n = 3, k = 5, p = 0;
+	int n = 3, k = 5, p = 0, bloques;
 	for(int i=0; i<argc; i++){
 		if( !strcmp(argv[i], "-n" ) ) n = atoi(argv[i+1]);
 		if( !strcmp(argv[i], "-k" ) ) k = atoi(argv[i+1]);
 		if( !strcmp(argv[i], "-p" ) ) p = 1;
+		if( !strcmp(argv[i], "-b" ) ) bloques = atoi(argv[i+1]);
 	}
 
 	// memoria
-	vector<int*> arreglosDst(n), arreglosSrc(n);
+	vector<int*> arreglosDst(n), arreglosSrc(n), maximos(n);
     for (int i = 0; i < n; i++) {
         cudaMallocHost(&arreglosSrc[i], k * sizeof(int));
-        cudaMalloc(&arreglosDst[i], k* sizeof(int));
+        cudaMalloc(&arreglosDst[i], k * sizeof(int));
+        cudaMallocHost(&maximos[i], sizeof(int));
     }
 	
 
@@ -70,7 +72,7 @@ int main(int argc, char *argv[]) {
 		for(int j=0; j<k; j++){
 			arreglosSrc[i][j] = j;
 		}
-		shuffle(arreglosSrc[i], arreglosSrc[i] + k, std::mt19937{std::random_device{}()});
+		shuffle(arreglosSrc[i], arreglosSrc[i] + k, mt19937{random_device{}()});
 	}
 
 	// print arreglos
@@ -87,24 +89,27 @@ int main(int argc, char *argv[]) {
 	vector<cudaStream_t> stream(n);
 	for (int i=0; i<n; i++) cudaStreamCreate(&stream[i]);
 
-	int bloques = 100;
-	int hebras = ceil(k/bloques);
+	bloques = max(4, 32 * k/1024);
+	int hebras = (k + bloques - 1) / bloques;
 	int sharedBytes = hebras * sizeof(int);
+
+	cout << bloques << endl;
+	cout << hebras << endl;
+	cout << sharedBytes << endl;
+	
 	for (int i=0; i<n; i++) {
 		// copia arreglo host a gpu
 		cudaMemcpyAsync(arreglosDst[i], arreglosSrc[i], k * sizeof(int), cudaMemcpyHostToDevice, stream[i]);
 		
 		// kernel
-		reduce<<<bloques, hebras, sharedBytes, stream[i]>>>(arreglosDst[i], arreglosDst[i]);
-
-		// copia arreglo gpu a host
-		cudaMemcpyAsync(arreglosSrc[i], arreglosDst[i], sizeof(int), cudaMemcpyDeviceToHost, stream[i]);
+		reduce<<<bloques, hebras, sharedBytes, stream[i]>>>(maximos[i], arreglosDst[i]);
 	}
-	cudaDeviceSynchronize();	// Sincronizacion de los streams
-
+	
+	// Sincronizacion de los streams
+	cudaDeviceSynchronize();	
 
 	// print de los maximos
-    for (int i = 0; i < n; i++) cout << arreglosSrc[i][0] << " ";
+    for (int i = 0; i < n; i++) cout << maximos[i][0] << " ";
 
 	// liberacion memoria y strems
 	for(int i=0; i<n; i++){
