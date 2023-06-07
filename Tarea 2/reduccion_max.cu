@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
         cudaMallocHost(&maximos[i], sizeof(int));
     }
 	
-	
+
 	// creacion arreglos
 	for(int i=0; i<n; i++){
 		for(int j=0; j<k; j++){
@@ -93,6 +93,7 @@ int main(int argc, char *argv[]) {
 	vector<cudaStream_t> stream(n);
 	for (int i=0; i<n; i++) cudaStreamCreate(&stream[i]);
 
+	// calculo para no superar el limite de hebras del bloque
 	if(bloques == -1) bloques = max(2, 32 * k/1024);
 	int hebras = (k + bloques - 1) / bloques;
 	int sharedBytes = hebras * sizeof(int);
