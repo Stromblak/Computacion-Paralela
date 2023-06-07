@@ -50,13 +50,16 @@ __global__ void reduce(int *maximos, int *input){
 
 int main(int argc, char *argv[]) {
 	// arreglos, tamaño
-	int n = 3, k = 5, p = 0, bloques = -1;
+	int n = 3, k1 = 5, p = 0, bloques = -1;
 	for(int i=0; i<argc; i++){
 		if( !strcmp(argv[i], "-n" ) ) n = atoi(argv[i+1]);
-		if( !strcmp(argv[i], "-k" ) ) k = atoi(argv[i+1]);
+		if( !strcmp(argv[i], "-k" ) ) k1 = atoi(argv[i+1]);
 		if( !strcmp(argv[i], "-p" ) ) p = 1;
 		if( !strcmp(argv[i], "-b" ) ) bloques = atoi(argv[i+1]);
 	}
+
+
+	int k = pow(2, ceil(log(k1)/log(2)));
 
 	// memoria
 	vector<int*> arreglosDst(n), arreglosSrc(n), maximos(n);
@@ -66,11 +69,12 @@ int main(int argc, char *argv[]) {
         cudaMallocHost(&maximos[i], sizeof(int));
     }
 	
-
+	
 	// creacion arreglos
 	for(int i=0; i<n; i++){
 		for(int j=0; j<k; j++){
-			arreglosSrc[i][j] = j;
+			if(j < k1) arreglosSrc[i][j] = j;
+			else arreglosSrc[i][j] = 0;
 		}
 		shuffle(arreglosSrc[i], arreglosSrc[i] + k, mt19937{random_device{}()});
 	}
@@ -93,9 +97,9 @@ int main(int argc, char *argv[]) {
 	int hebras = (k + bloques - 1) / bloques;
 	int sharedBytes = hebras * sizeof(int);
 
-	cout << bloques << endl;
-	cout << hebras << endl;
-	cout << sharedBytes << endl;
+	cout << "Bloques:    " << bloques << endl;
+	cout << "Hebras:     " << hebras << endl;
+	cout << "sharedbits: " << sharedBytes << endl;
 	
 	for (int i=0; i<n; i++) {
 		// copia arreglo host a gpu
