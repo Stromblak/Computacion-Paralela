@@ -70,7 +70,7 @@ int main(int argc, char *argv[]) {
     }
 	
 
-	// creacion arreglos
+	// creacion arreglos y relleno de ceros para que sea potencia de 2
 	for(int i=0; i<n; i++){
 		for(int j=0; j<k; j++){
 			if(j < k1) arreglosSrc[i][j] = j;
