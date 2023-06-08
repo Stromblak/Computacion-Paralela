@@ -76,7 +76,7 @@ int main(int argc, char *argv[]) {
 			if(j < k1) arreglosSrc[i][j] = j;
 			else arreglosSrc[i][j] = 0;
 		}
-		shuffle(arreglosSrc[i], arreglosSrc[i] + k, mt19937{random_device{}()});
+		shuffle(arreglosSrc[i], arreglosSrc[i] + k1, mt19937{random_device{}()});
 	}
 
 	// print arreglos
